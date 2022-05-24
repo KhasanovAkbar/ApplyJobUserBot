@@ -1,6 +1,7 @@
-package univ.tuit.applyjobuserbot.services;
+package univ.tuit.applyjobuserbot.logic;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -10,11 +11,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import univ.tuit.applyjobuserbot.cache.Cache;
 import univ.tuit.applyjobuserbot.domain.Apply;
 import univ.tuit.applyjobuserbot.domain.Jobs;
 import univ.tuit.applyjobuserbot.domain.State;
 import univ.tuit.applyjobuserbot.messageSender.MessageSender;
+import univ.tuit.applyjobuserbot.services.ApplyService;
+import univ.tuit.applyjobuserbot.services.JobService;
+import univ.tuit.applyjobuserbot.services.RequirementService;
+import univ.tuit.applyjobuserbot.services.SendMessageService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,14 +30,20 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-
 @Component
 @Slf4j
-public class SendMessageServiceImpl implements SendMessageService<Message> {
+public class SendMessageLogic implements SendMessageService<Message> {
 
     private final MessageSender messageSender;
-    private final Cache<Apply> applyCache;
-    private final Cache<Jobs> jobsCache;
+
+    @Autowired
+    JobService<Jobs> jobService;
+
+    @Autowired
+    RequirementService requirementService;
+
+    @Autowired
+    ApplyService<Apply> applyService;
 
     @Value("${telegram.bot.token}")
     private String token;
@@ -44,10 +54,8 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
     static Apply apply = new Apply();
 
 
-    public SendMessageServiceImpl(MessageSender messageSender, Cache<Apply> applyCache, Cache<Jobs> jobsCache) {
+    public SendMessageLogic(MessageSender messageSender) {
         this.messageSender = messageSender;
-        this.applyCache = applyCache;
-        this.jobsCache = jobsCache;
     }
 
 
@@ -82,7 +90,7 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
             SendMessage sm = new SendMessage();
             sm.setText("Ish joyi topish uchun ariza berish\n" +
                     "\n" +
-                    "Hozir sizga birnecha savollar beriladi. \n" +
+                    "Hozir sizga bir necha savollar beriladi. \n" +
                     "Har biriga javob bering. \n" +
                     "Oxirida agar hammasi to`g`ri bo`lsa, HA tugmasini bosing va arizangiz Adminga yuboriladi.");
             sm.setChatId(String.valueOf(message.getChatId()));
@@ -94,7 +102,7 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
                     .build());
             apply.setJobId(message.getText());
             apply.setIsJobId(true);
-            applyCache.add(apply);
+            applyService.apply(apply);
             log.info("Create user");
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -104,100 +112,101 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
     @Override
     public void applyJob(Message message, Integer id) {
         long chat_id = message.getChatId();
-        apply = applyCache.findBy(chat_id, id);
+        apply = applyService.findBy(chat_id, id);
+        if (apply.isJobId()) {
+            Jobs byJobId = jobService.findByJobId(message.getText());
+            if (byJobId == null) {
+                messageSender.sendMessage(SendMessage
+                        .builder().text("Bunday ish id topilmadi.")
+                        .chatId(String.valueOf(chat_id))
+                        .build());
+                messageSender.sendMessage(SendMessage.builder()
+                        .text("Ish id:")
+                        .chatId(String.valueOf(message.getChatId()))
+                        .build());
 
-        Jobs byJobId = jobsCache.findByJobId(message.getText());
-        if (apply.isJobId() && byJobId == null) {
+            } else {
+                messageSender.sendMessage(SendMessage.builder().text(
+                                "\uD83C\uDF93 Id: " + byJobId.getJobId() + "\n" +
+                                        "\uD83C\uDFE2 Idora: " + byJobId.getCompanyName() + "\n" +
+                                        "\uD83D\uDCDA Texnologiya: " + byJobId.getTechnology() + "\n" +
+                                        "\uD83C\uDF10 Hudud: " + byJobId.getTerritory())
+                        .parseMode("HTML")
+                        .chatId(String.valueOf(message.getChatId()))
+                        .build());
+                apply.setIsName(true);
+            }
+        }
+        if (apply.getName().equals("Register") && apply.isName()) {
             messageSender.sendMessage(SendMessage
-                    .builder().text("Bunday ish id topilmadi.")
+                    .builder().text("Ism, familiyangizni kiriting?")
                     .chatId(String.valueOf(chat_id))
                     .build());
-            messageSender.sendMessage(SendMessage.builder()
-                    .text("Ish id:")
-                    .chatId(String.valueOf(message.getChatId()))
-                    .build());
+            apply.setJobId(message.getText());
+            apply.setName(message.getText());
+            apply.setIsAge(true);
+            apply.setIsJobId(false);
 
-        } else if (byJobId != null){
-            messageSender.sendMessage(SendMessage.builder().text(
-                            "\uD83C\uDF93 Id: " + byJobId.getJobId() + "\n" +
-                                    "\uD83C\uDFE2 Idora: " + byJobId.getCompanyName() + "\n" +
-                                    "\uD83D\uDCDA Texnologiya: " + byJobId.getTechnology() + "\n" +
-                                    "\uD83C\uDF10 Hudud: " + byJobId.getTerritory())
-                    .parseMode("HTML")
-                    .chatId(String.valueOf(message.getChatId()))
+        } else if (apply.getAge().equals("Register") && apply.isAge()) {
+            messageSender.sendMessage(SendMessage
+                    .builder().text("\uD83D\uDD51 Yosh: \n" +
+                            "\n" +
+                            "Yoshingizni kiriting?\n" +
+                            "Masalan, 19")
+                    .chatId(String.valueOf(chat_id))
                     .build());
+            apply.setName(message.getText());
+            apply.setAge(message.getText());
+            apply.setIsPhone(true);
+
+        } else if (apply.getPhoneNumber().equals("Register") && apply.isPhone()) {
+            messageSender.sendMessage(SendMessage
+                    .builder().text("\uD83D\uDCDE Aloqa: \n" +
+                            "\n" +
+                            "Bog`lanish uchun raqamingizni kiriting?\n" +
+                            "Masalan, +998 90 123 45 67")
+                    .chatId(String.valueOf(chat_id))
+                    .build());
+            apply.setAge(message.getText());
+            apply.setPhoneNumber(message.getText());
+            apply.setIsFilePath(true);
+
+        } else if (apply.getFilePath().equals("Register") && apply.isFilePath()) {
+            messageSender.sendMessage(SendMessage
+                    .builder().text("\uD83D\uDCC1 Fayl: \n" +
+                            "\n" +
+                            "CV yuboring (pdf, docx, doc)")
+                    .chatId(String.valueOf(chat_id))
+                    .build());
+            apply.setPhoneNumber(message.getText());
+            apply.setFilePath(message.getText());
+
+        } else if (message.getText().equals("Ha") && apply.getState().equals(State.CHECKED.toString())) {
+            SendMessage sm = new SendMessage();
+            sm.setText("Ma'lumotlaringiz ish beruvchiga yuborildi");
+            sm.setParseMode("HTML");
+            sm.setChatId(String.valueOf(message.getChatId()));
+            apply.setState(State.COMPLETED.toString());
+            keyboardRow.clear();
+            sm.setReplyMarkup(buttons());
+            messageSender.sendMessage(sm);
+
+        } else if (message.getText().equals("Yo'q") && apply.getState().equals(State.CHECKED.toString())) {
+            SendMessage sm = new SendMessage();
+            sm.setText("Qabul qilinmadi" +
+                    "\n/start so`zini bosing. E'lon berish qaytadan boshlanadi");
+            sm.setChatId(String.valueOf(message.getChatId()));
+            apply.setState(State.DENIED.toString());
+            apply.setIsJobId(false);
+            apply.setIsName(false);
+            apply.setIsAge(false);
+            apply.setIsPhone(false);
+            apply.setIsFilePath(false);
+            keyboardRow.clear();
+            sm.setReplyMarkup(buttons());
+            messageSender.sendMessage(sm);
         }
-            if (apply.getName().equals("Register") && apply.isJobId()) {
-                messageSender.sendMessage(SendMessage
-                        .builder().text("Ism, familiyangizni kiriting?")
-                        .chatId(String.valueOf(chat_id))
-                        .build());
-                apply.setJobId(message.getText());
-                apply.setName(message.getText());
-                apply.setIsName(true);
-                apply.setIsJobId(false);
-
-            } else if (apply.getAge().equals("Register") && apply.isName()) {
-                messageSender.sendMessage(SendMessage
-                        .builder().text("\uD83D\uDD51 Yosh: \n" +
-                                "\n" +
-                                "Yoshingizni kiriting?\n" +
-                                "Masalan, 19")
-                        .chatId(String.valueOf(chat_id))
-                        .build());
-                apply.setName(message.getText());
-                apply.setAge(message.getText());
-                apply.setIsAge(true);
-
-            } else if (apply.getPhoneNumber().equals("Register") && apply.isAge()) {
-                messageSender.sendMessage(SendMessage
-                        .builder().text("\uD83D\uDCDE Aloqa: \n" +
-                                "\n" +
-                                "Bog`lanish uchun raqamingizni kiriting?\n" +
-                                "Masalan, +998 90 123 45 67")
-                        .chatId(String.valueOf(chat_id))
-                        .build());
-                apply.setAge(message.getText());
-                apply.setPhoneNumber(message.getText());
-                apply.setIsPhone(true);
-
-            } else if (apply.getFilePath().equals("Register") && apply.isPhone()) {
-                messageSender.sendMessage(SendMessage
-                        .builder().text("\uD83D\uDCC1 Fayl: \n" +
-                                "\n" +
-                                "CV yuboring (pdf, docx, doc)")
-                        .chatId(String.valueOf(chat_id))
-                        .build());
-                apply.setPhoneNumber(message.getText());
-                apply.setFilePath(message.getText());
-                apply.setIsFilePath(true);
-
-            } else if (message.getText().equals("Ha") && apply.getState().equals(State.CHECKED.toString())) {
-                SendMessage sm = new SendMessage();
-                sm.setText("Ma'lumotlaringiz ish beruvchiga yuborildi");
-                sm.setParseMode("HTML");
-                sm.setChatId(String.valueOf(message.getChatId()));
-                apply.setState(State.COMPLETED.toString());
-                keyboardRow.clear();
-                sm.setReplyMarkup(buttons());
-                messageSender.sendMessage(sm);
-
-            } else if (message.getText().equals("Yo'q") && apply.getState().equals(State.CHECKED.toString())) {
-                SendMessage sm = new SendMessage();
-                sm.setText("Qabul qilinmadi" +
-                        "\n/start so`zini bosing. E'lon berish qaytadan boshlanadi");
-                sm.setChatId(String.valueOf(message.getChatId()));
-                apply.setState(State.DENIED.toString());
-                apply.setIsJobId(false);
-                apply.setIsName(false);
-                apply.setIsAge(false);
-                apply.setIsPhone(false);
-                apply.setIsFilePath(false);
-                keyboardRow.clear();
-                sm.setReplyMarkup(buttons());
-                messageSender.sendMessage(sm);
-            }
-            applyCache.update(apply);
+        applyService.update(apply);
     }
 
     @Override
@@ -205,7 +214,7 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
 
         long chat_id = message.getChatId();
         Document document = message.getDocument();
-        apply = applyCache.findBy(chat_id, id);
+        apply = applyService.findBy(chat_id, id);
         String fileId = document.getFileId();
 
         String urlContents = getUrlContents("https://api.telegram.org/bot" + token + "/getFile?file_id=" + fileId);
@@ -240,7 +249,7 @@ public class SendMessageServiceImpl implements SendMessageService<Message> {
             apply.setState(State.CHECKED.toString());
             log.info("File was uploaded");
         }
-        applyCache.update(apply);
+        applyService.update(apply);
     }
 
     @Override

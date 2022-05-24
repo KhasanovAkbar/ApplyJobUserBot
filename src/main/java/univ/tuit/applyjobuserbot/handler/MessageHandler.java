@@ -3,9 +3,9 @@ package univ.tuit.applyjobuserbot.handler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import univ.tuit.applyjobuserbot.cache.Cache;
 import univ.tuit.applyjobuserbot.domain.Apply;
-import univ.tuit.applyjobuserbot.services.SendMessageServiceImpl;
+import univ.tuit.applyjobuserbot.logic.SendMessageLogic;
+import univ.tuit.applyjobuserbot.services.ApplyService;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -18,14 +18,10 @@ import java.util.List;
 public class MessageHandler implements Handler<Message> {
 
     @Autowired
-    private final Cache<Apply> cache;
+    private ApplyService<Apply> applyService;
 
     @Autowired
-    private SendMessageServiceImpl sendMessageService;
-
-    public MessageHandler(Cache<Apply> cache) {
-        this.cache = cache;
-    }
+    private SendMessageLogic sendMessageService;
 
 
     @Override
@@ -36,7 +32,7 @@ public class MessageHandler implements Handler<Message> {
         String message_text = message.getText();
 
         if (message.hasText()) {
-            log(user_first_name, user_last_name, Long.toString(user_id), message_text, message_text);
+            log(user_first_name, user_last_name, Long.toString(user_id), message_text);
 
             switch (message.getText()) {
                 case "/start":
@@ -55,7 +51,7 @@ public class MessageHandler implements Handler<Message> {
                     sendMessageService.apply(message);
                     break;
                 default:
-                    List<Apply> all = cache.getAll();
+                    List<Apply> all = applyService.getAll();
                     Apply lastJob = new Apply();
                     for (Apply job : all) {
                         if (job.getUserId().equals(user_id)) {
@@ -63,14 +59,13 @@ public class MessageHandler implements Handler<Message> {
                             break;
                         }
                     }
-                    if (message.getFrom().getId().equals(cache.findBy(user_id, lastJob.getApplyId()).getUserId())) {
-                        if (lastJob.isJobId())
+                    if (message.getFrom().getId().equals(applyService.findBy(user_id, lastJob.getApplyId()).getUserId())) {
                             sendMessageService.applyJob(message, lastJob.getApplyId());
                     }
             }
         } else if (message.hasDocument()) {
-            log(user_first_name, user_last_name, Long.toString(user_id), message_text, message_text);
-            List<Apply> all = cache.getAll();
+            log(user_first_name, user_last_name, Long.toString(user_id), message_text);
+            List<Apply> all = applyService.getAll();
             Apply lastJob = new Apply();
             for (Apply job : all) {
                 if (job.getUserId().equals(user_id)) {
@@ -78,7 +73,7 @@ public class MessageHandler implements Handler<Message> {
                     break;
                 }
             }
-            if (message.getFrom().getId().equals(cache.findBy(user_id, lastJob.getApplyId()).getUserId())) {
+            if (message.getFrom().getId().equals(applyService.findBy(user_id, lastJob.getApplyId()).getUserId())) {
                 try {
                     sendMessageService. sendCV(message, lastJob.getApplyId());
                 } catch (IOException e) {
@@ -90,13 +85,12 @@ public class MessageHandler implements Handler<Message> {
 
     }
 
-    public static void log(String first_name, String last_name, String user_id, String txt, String bot_answer) {
+    public static void log(String first_name, String last_name, String user_id, String txt) {
         System.out.println("\n ----------------------------");
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Date date = new Date();
         System.out.println(dateFormat.format(date));
         System.out.println("Message from " + first_name + " " + last_name + ". (id = " + user_id + ") \n Text - " + txt);
-        System.out.println("Bot answer: \n Text - " + bot_answer);
     }
 
 }
