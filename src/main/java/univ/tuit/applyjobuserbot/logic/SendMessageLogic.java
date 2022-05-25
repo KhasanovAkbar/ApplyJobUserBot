@@ -101,7 +101,7 @@ public class SendMessageLogic implements SendMessageService<Message> {
                     .chatId(String.valueOf(message.getChatId()))
                     .build());
             apply.setJobId(message.getText());
-            apply.setIsJobId(true);
+            apply.setIsJobId(1);
             applyService.apply(apply);
             log.info("Create user");
         } catch (Exception e) {
@@ -112,8 +112,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
     @Override
     public void applyJob(Message message, Integer id) {
         long chat_id = message.getChatId();
+        apply = new Apply();
         apply = applyService.findBy(chat_id, id);
-        if (apply.isJobId()) {
+        if (apply.getIsJobId() == 1) {
             Jobs byJobId = jobService.findByJobId(message.getText());
             if (byJobId == null) {
                 messageSender.sendMessage(SendMessage
@@ -134,20 +135,20 @@ public class SendMessageLogic implements SendMessageService<Message> {
                         .parseMode("HTML")
                         .chatId(String.valueOf(message.getChatId()))
                         .build());
-                apply.setIsName(true);
+                apply.setIsName(1);
             }
         }
-        if (apply.getName().equals("Register") && apply.isName()) {
+        if (apply.getName().equals("Register") && apply.getIsName() == 1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("Ism, familiyangizni kiriting?")
                     .chatId(String.valueOf(chat_id))
                     .build());
             apply.setJobId(message.getText());
             apply.setName(message.getText());
-            apply.setIsAge(true);
-            apply.setIsJobId(false);
+            apply.setIsAge(1);
+            apply.setIsJobId(0);
 
-        } else if (apply.getAge().equals("Register") && apply.isAge()) {
+        } else if (apply.getAge().equals("Register") && apply.getIsAge()== 1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDD51 Yosh: \n" +
                             "\n" +
@@ -157,9 +158,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
                     .build());
             apply.setName(message.getText());
             apply.setAge(message.getText());
-            apply.setIsPhone(true);
+            apply.setIsPhone(1);
 
-        } else if (apply.getPhoneNumber().equals("Register") && apply.isPhone()) {
+        } else if (apply.getPhoneNumber().equals("Register") && apply.getIsPhone()==1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDCDE Aloqa: \n" +
                             "\n" +
@@ -169,9 +170,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
                     .build());
             apply.setAge(message.getText());
             apply.setPhoneNumber(message.getText());
-            apply.setIsFilePath(true);
+            apply.setIsFilePath(1);
 
-        } else if (apply.getFilePath().equals("Register") && apply.isFilePath()) {
+        } else if (apply.getFilePath().equals("Register") && apply.getIsFilePath()==1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDCC1 Fayl: \n" +
                             "\n" +
@@ -197,11 +198,11 @@ public class SendMessageLogic implements SendMessageService<Message> {
                     "\n/start so`zini bosing. E'lon berish qaytadan boshlanadi");
             sm.setChatId(String.valueOf(message.getChatId()));
             apply.setState(State.DENIED.toString());
-            apply.setIsJobId(false);
-            apply.setIsName(false);
-            apply.setIsAge(false);
-            apply.setIsPhone(false);
-            apply.setIsFilePath(false);
+            apply.setIsJobId(0);
+            apply.setIsName(0);
+            apply.setIsAge(0);
+            apply.setIsPhone(0);
+            apply.setIsFilePath(0);
             keyboardRow.clear();
             sm.setReplyMarkup(buttons());
             messageSender.sendMessage(sm);
@@ -221,7 +222,7 @@ public class SendMessageLogic implements SendMessageService<Message> {
         apply.setFilePath(urlContents);
         apply.setToken(token);
 
-        if (apply.getState().equals(State.NONE.toString()) && apply.isFilePath()) {
+        if (apply.getState().equals(State.NONE.toString()) && apply.getIsFilePath()==1) {
             markup = new ReplyKeyboardMarkup();
             keyboardRow = new ArrayList<>();
             messageSender.sendMessage(SendMessage.builder()

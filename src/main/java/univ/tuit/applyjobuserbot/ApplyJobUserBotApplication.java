@@ -10,4 +10,6 @@ public class ApplyJobUserBotApplication {
         SpringApplication.run(ApplyJobUserBotApplication.class, args);
     }
 
+
+
 }
