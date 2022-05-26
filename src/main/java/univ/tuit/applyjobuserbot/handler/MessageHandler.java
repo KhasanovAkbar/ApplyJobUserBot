@@ -3,9 +3,9 @@ package univ.tuit.applyjobuserbot.handler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import univ.tuit.applyjobuserbot.domain.Apply;
+import univ.tuit.applyjobuserbot.domain.Candidate;
 import univ.tuit.applyjobuserbot.logic.SendMessageLogic;
-import univ.tuit.applyjobuserbot.services.ApplyService;
+import univ.tuit.applyjobuserbot.services.CandidateService;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -18,7 +18,7 @@ import java.util.List;
 public class MessageHandler implements Handler<Message> {
 
     @Autowired
-    private ApplyService<Apply> applyService;
+    private CandidateService<Candidate> candidateService;
 
     @Autowired
     private SendMessageLogic sendMessageService;
@@ -51,38 +51,37 @@ public class MessageHandler implements Handler<Message> {
                     sendMessageService.apply(message);
                     break;
                 default:
-                    List<Apply> all = applyService.getAll();
-                    Apply lastJob = new Apply();
-                    for (Apply job : all) {
+                    List<Candidate> all = candidateService.getAll();
+                    Candidate lastJob = new Candidate();
+                    for (Candidate job : all) {
                         if (job.getUserId().equals(user_id)) {
                             lastJob = job;
                             break;
                         }
                     }
-                    if (message.getFrom().getId().equals(applyService.findBy(user_id, lastJob.getApplyId()).getUserId())) {
-                            sendMessageService.applyJob(message, lastJob.getApplyId());
+                    if (message.getFrom().getId().equals(candidateService.findBy(user_id, lastJob.getCandidateId()).getUserId())) {
+                            sendMessageService.applyJob(message, lastJob.getCandidateId());
                     }
             }
         } else if (message.hasDocument()) {
             log(user_first_name, user_last_name, Long.toString(user_id), message_text);
-            List<Apply> all = applyService.getAll();
-            Apply lastJob = new Apply();
-            for (Apply job : all) {
+            List<Candidate> all = candidateService.getAll();
+            Candidate lastJob = new Candidate();
+            for (Candidate job : all) {
                 if (job.getUserId().equals(user_id)) {
                     lastJob = job;
                     break;
                 }
             }
-            if (message.getFrom().getId().equals(applyService.findBy(user_id, lastJob.getApplyId()).getUserId())) {
+            Long userId = candidateService.findBy(user_id, lastJob.getCandidateId()).getUserId();
+            if (message.getFrom().getId().equals(userId)) {
                 try {
-                    sendMessageService. sendCV(message, lastJob.getApplyId());
+                    sendMessageService. sendCV(message, lastJob.getCandidateId());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-
         }
-
     }
 
     public static void log(String first_name, String last_name, String user_id, String txt) {
