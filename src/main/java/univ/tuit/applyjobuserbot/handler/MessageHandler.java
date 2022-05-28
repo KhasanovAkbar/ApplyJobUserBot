@@ -39,7 +39,6 @@ public class MessageHandler implements Handler<Message> {
             switch (message.getText()) {
                 case "/start":
                     sm = sendMessageService.start(message);
-                    //    cache.add(user);
                     break;
 
                 case "/restart":
