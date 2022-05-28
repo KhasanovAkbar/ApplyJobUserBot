@@ -35,7 +35,6 @@ import java.util.List;
 @Slf4j
 public class SendMessageLogic implements SendMessageService<Message> {
 
-    private final MessageSender messageSender;
 
     @Autowired
     JobService<Jobs> jobService;
@@ -48,6 +47,8 @@ public class SendMessageLogic implements SendMessageService<Message> {
 
     @Autowired
     ApplyService<Applied> applyService;
+
+    private final MessageSender messageSender;
 
     @Value("${telegram.bot.token}")
     private String token;
@@ -65,7 +66,7 @@ public class SendMessageLogic implements SendMessageService<Message> {
 
 
     @Override
-    public void start(Message message) {
+    public SendMessage start(Message message) {
         try {
             SendMessage sendMessage = new SendMessage();
             sendMessage.setText("Hello " + message.getFrom().getFirstName() + "\nLorem ipsum");
@@ -77,18 +78,19 @@ public class SendMessageLogic implements SendMessageService<Message> {
         } catch (Exception e) {
             log.error(e.getMessage());
         }
+        return null;
     }
 
     @Override
-    public void restart(Message message) {
+    public SendMessage restart(Message message) {
         //restart bot
         log.info("bot restarted");
         start(message);
-
+        return null;
     }
 
     @Override
-    public void apply(Message message) {
+    public SendMessage apply(Message message) {
         try {
             long chat_id = message.getChatId();
             candidate = new Candidate();
@@ -112,10 +114,11 @@ public class SendMessageLogic implements SendMessageService<Message> {
         } catch (Exception e) {
             log.error(e.getMessage());
         }
+        return null;
     }
 
     @Override
-    public void applyJob(Message message, Integer id) {
+    public SendMessage applyJob(Message message, Integer id) {
         long chat_id = message.getChatId();
         candidate = new Candidate();
         candidate = candidateService.findBy(chat_id, id);
@@ -225,7 +228,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
                     break;
                 }
             }
-        } else if (candidate.getIsRequirement() == 1 && message.getText().equals("Ha")) {
+        }
+
+        else if (candidate.getIsRequirement() == 1 && message.getText().equals("Ha")) {
             Applied apply;
             apply = applyService.findByJobIdAndCandidateId(candidate.getJobId(), candidate.getUserId());
             List<Requirement> byJob = requirementService.findByJob(jobService.findByJobId(candidate.getJobId()));
@@ -243,7 +248,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
                 }
             }
 
-        } else if (candidate.getIsRequirement() == 1 && message.getText().equals("Yo'q")) {
+        }
+
+        else if (candidate.getIsRequirement() == 1 && message.getText().equals("Yo'q")) {
             applied = new Applied();
             applied = applyService.findByJobIdAndCandidateId(candidate.getJobId(), candidate.getUserId());
             keyboardRow.clear();
@@ -256,6 +263,7 @@ public class SendMessageLogic implements SendMessageService<Message> {
             applied.setStatus(ApplyEnum.REJECTED.name());
             applyService.update(applied);
         }
+
         if (candidate.getName().equals("Register") && candidate.getIsName() == 1) {
             applied = new Applied();
             applied = applyService.findByJobIdAndCandidateId(candidate.getJobId(), candidate.getUserId());
@@ -269,7 +277,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
             applied.setStatus(ApplyEnum.ACCEPTED.name());
             applyService.update(applied);
 
-        } else if (candidate.getAge().equals("Register") && candidate.getIsAge() == 1) {
+        }
+
+        else if (candidate.getAge().equals("Register") && candidate.getIsAge() == 1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDD51 Yosh: \n" +
                             "\n" +
@@ -282,7 +292,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
             candidate.setAge(message.getText());
             candidate.setIsPhone(1);
 
-        } else if (candidate.getPhoneNumber().equals("Register") && candidate.getIsPhone() == 1) {
+        }
+
+        else if (candidate.getPhoneNumber().equals("Register") && candidate.getIsPhone() == 1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDCDE Aloqa: \n" +
                             "\n" +
@@ -294,7 +306,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
             candidate.setPhoneNumber(message.getText());
             candidate.setIsFilePath(1);
 
-        } else if (candidate.getFilePath().equals("Register") && candidate.getIsFilePath() == 1) {
+        }
+
+        else if (candidate.getFilePath().equals("Register") && candidate.getIsFilePath() == 1) {
             messageSender.sendMessage(SendMessage
                     .builder().text("\uD83D\uDCC1 Fayl: \n" +
                             "\n" +
@@ -304,7 +318,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
             candidate.setPhoneNumber(message.getText());
             candidate.setFilePath(message.getText());
 
-        } else if (message.getText().equals("Ha") && candidate.getState().equals(State.CHECKED.toString())) {
+        }
+
+        else if (message.getText().equals("Ha") && candidate.getState().equals(State.CHECKED.toString())) {
 
             applied = new Applied();
             applied = applyService.findByJobIdAndCandidateId(candidate.getJobId(), candidate.getUserId());
@@ -319,7 +335,9 @@ public class SendMessageLogic implements SendMessageService<Message> {
             messageSender.sendMessage(sm);
             applyService.update(applied);
 
-        } else if (message.getText().equals("Yo'q") && candidate.getState().equals(State.CHECKED.toString())) {
+        }
+
+        else if (message.getText().equals("Yo'q") && candidate.getState().equals(State.CHECKED.toString())) {
             SendMessage sm = new SendMessage();
             sm.setText("Qabul qilinmadi" +
                     "\n/start so`zini bosing. E'lon berish qaytadan boshlanadi");
@@ -335,10 +353,11 @@ public class SendMessageLogic implements SendMessageService<Message> {
             messageSender.sendMessage(sm);
         }
         candidateService.update(candidate);
+        return null;
     }
 
     @Override
-    public void sendCV(Message message, Integer id) throws IOException {
+    public SendMessage sendCV(Message message, Integer id) throws IOException {
 
         long chat_id = message.getChatId();
         Document document = message.getDocument();
@@ -378,15 +397,16 @@ public class SendMessageLogic implements SendMessageService<Message> {
             log.info("File was uploaded");
         }
         candidateService.update(candidate);
+        return null;
     }
 
     @Override
-    public void help(Message message) {
-        messageSender.sendMessage(SendMessage
+    public SendMessage help(Message message) {
+        log.info("info");
+        return SendMessage
                 .builder().text("Bu bot bir narsa bir narsa")
                 .chatId(String.valueOf(message.getChatId()))
-                .build());
-        log.info("info");
+                .build();
     }
 
     private ReplyKeyboard buttons() {

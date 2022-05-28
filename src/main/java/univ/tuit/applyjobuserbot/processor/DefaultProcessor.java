@@ -1,13 +1,14 @@
 package univ.tuit.applyjobuserbot.processor;
 
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import univ.tuit.applyjobuserbot.handler.CallBackQueryHandler;
 import univ.tuit.applyjobuserbot.handler.MessageHandler;
 
 @Component
-public class DefaultProcessor implements Processor{
+public class DefaultProcessor implements Processor {
 
     private final CallBackQueryHandler callBackQueryHandler;
     private final MessageHandler messageHandler;
@@ -18,13 +19,13 @@ public class DefaultProcessor implements Processor{
     }
 
     @Override
-    public void executeQuery(Message message) {
-        messageHandler.choose(message);
+    public SendMessage executeQuery(Message message) {
+        return messageHandler.choose(message);
 
     }
 
     @Override
-    public void executeCallBackQuery(CallbackQuery callbackQuery) {
-        callBackQueryHandler.choose(callbackQuery);
+    public SendMessage executeCallBackQuery(CallbackQuery callbackQuery) {
+        return callBackQueryHandler.choose(callbackQuery);
     }
 }

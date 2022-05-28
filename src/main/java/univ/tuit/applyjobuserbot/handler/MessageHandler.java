@@ -2,6 +2,7 @@ package univ.tuit.applyjobuserbot.handler;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import univ.tuit.applyjobuserbot.domain.Candidate;
 import univ.tuit.applyjobuserbot.logic.SendMessageLogic;
@@ -25,30 +26,31 @@ public class MessageHandler implements Handler<Message> {
 
 
     @Override
-    public void choose(Message message) {
+    public SendMessage choose(Message message) {
         String user_first_name = message.getChat().getFirstName();
         String user_last_name = message.getChat().getLastName();
         long user_id = message.getChat().getId();
         String message_text = message.getText();
+        SendMessage sm = null;
 
         if (message.hasText()) {
             log(user_first_name, user_last_name, Long.toString(user_id), message_text);
 
             switch (message.getText()) {
                 case "/start":
-                    sendMessageService.start(message);
+                    sm = sendMessageService.start(message);
                     //    cache.add(user);
                     break;
 
                 case "/restart":
-                    sendMessageService.restart(message);
+                    sm = sendMessageService.restart(message);
                     //     cache.add(user);
                     break;
                 case "/help":
-                    sendMessageService.help(message);
+                    sm = sendMessageService.help(message);
                     break;
                 case "Register":
-                    sendMessageService.apply(message);
+                    sm = sendMessageService.apply(message);
                     break;
                 default:
                     List<Candidate> all = candidateService.getAll();
@@ -60,7 +62,7 @@ public class MessageHandler implements Handler<Message> {
                         }
                     }
                     if (message.getFrom().getId().equals(candidateService.findBy(user_id, lastJob.getCandidateId()).getUserId())) {
-                            sendMessageService.applyJob(message, lastJob.getCandidateId());
+                        sm = sendMessageService.applyJob(message, lastJob.getCandidateId());
                     }
             }
         } else if (message.hasDocument()) {
@@ -76,12 +78,13 @@ public class MessageHandler implements Handler<Message> {
             Long userId = candidateService.findBy(user_id, lastJob.getCandidateId()).getUserId();
             if (message.getFrom().getId().equals(userId)) {
                 try {
-                    sendMessageService. sendCV(message, lastJob.getCandidateId());
+                    sm = sendMessageService.sendCV(message, lastJob.getCandidateId());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
+        return sm;
     }
 
     public static void log(String first_name, String last_name, String user_id, String txt) {

@@ -2,19 +2,21 @@ package univ.tuit.applyjobuserbot.services;
 
 
 
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+
 import java.io.IOException;
 
 public interface SendMessageService<T> {
 
-    void start(T t);
+    SendMessage start(T t);
 
-    void restart(T t);
+    SendMessage restart(T t);
 
-    void apply(T t);
+    SendMessage apply(T t);
 
-    void applyJob(T t, Integer id);
+    SendMessage applyJob(T t, Integer id);
 
-    void sendCV(T t, Integer id) throws IOException;
+    SendMessage sendCV(T t, Integer id) throws IOException;
 
-    void help(T t);
+    SendMessage help(T t);
 }
